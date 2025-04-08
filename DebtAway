@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debt Snowball Calculator</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        .debt-item {
+            transition: all 0.3s ease;
+        }
+        
+        .debt-item:hover {
+            background-color: #f3f4f6;
+        }
+
+        @media print {
+            .no-print {
+                display: none;
+            }
+            
+            body {
+                font-size: 12px;
+            }
+            
+            .container {
+                width: 100%;
+                max-width: 100%;
+                padding: 0;
+                margin: 0;
+            }
+            
+            table {
+                page-break-inside: auto;
+            }
+            
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+            
+            .print-section {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="container mx-auto px-4 py-10">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-bold text-indigo-600 mb-2">Debt Snowball Calculator</h1>
+            <p class="text-gray-600">Plan your journey to financial freedom</p>
+        </header>
+
+        <!-- Input Form Section -->
+        <div id="input-section" class="bg-white rounded-lg shadow-lg p-6 mb-10">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Financial Information</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div>
+                    <label for="monthly-income" class="block text-sm font-medium text-gray-700 mb-1">Monthly Income</label>
+                    <div class="mt-1 relative rounded-md shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span id="currency-symbol" class="text-gray-500 sm:text-sm">₱</span>
+                        </div>
+                        <input type="number" id="monthly-income" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-12 sm:text-sm border-gray-300 rounded-md py-2 border" placeholder="0.00" value="80000">
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="monthly-expenses" class="block text-sm font-medium text-gray-700 mb-1">Monthly Expenses</label>
+                    <div class="mt-1 relative rounded-md shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500 sm:text-sm currency-symbol">₱</span>
+                        </div>
+                        <input type="number" id="monthly-expenses" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-12 sm:text-sm border-gray-300 rounded-md py-2 border" placeholder="0.00" value="30000">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <label for="currency" class="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                <select id="currency" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="₱">Philippine Peso (₱)</option>
+                    <option value="$">US Dollar ($)</option>
+                    <option value="€">Euro (€)</option>
+                    <option value="£">British Pound (£)</option>
+                    <option value="¥">Japanese Yen (¥)</option>
+                    <option value="₩">Korean Won (₩)</option>
+                    <option value="₹">Indian Rupee (₹)</option>
+                    <option value="A$">Australian Dollar (A$)</option>
+                    <option value="C$">Canadian Dollar (C$)</option>
+                    <option value="S$">Singapore Dollar (S$)</option>
+                </select>
+            </div>
+            
+            <div class="mb-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-800">Your Debts</h3>
+                    <button id="add-debt-btn" type="button" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Add Debt
+                    </button>
+                </div>
+                
+                <div id="debts-container" class="space-y-4">
+                    <!-- Debt entries will be added here -->
+                </div>
+            </div>
+            
+            <div class="flex justify-end">
+                <button id="calculate-btn" type="button" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    Calculate Debt Snowball
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-section" class="hidden">
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-10">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800">Your Debt Freedom Plan</h2>
+                    <div class="flex space-x-4">
+                        <button id="download-pdf-btn" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 no-print">
+                            <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Download PDF
+                        </button>
+                        <button id="back-to-inputs-btn" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 no-print">
+                            <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+                            </svg>
+                            Edit Inputs
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="pdf-content">
+                    <div class="summary-box bg-indigo-50 border-l-4 border-indigo-500 p-4 mb-8">
+                        <h3 class="text-lg font-semibold text-indigo-800 mb-3">Financial Freedom Summary</h3>
+                        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Total Debt</p>
+                                <p id="total-debt" class="mt-1 text-lg font-semibold text-gray-900">₱715,000</p>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Months to Freedom</p>
+                                <p id="months-to-freedom" class="mt-1 text-lg font-semibold text-gray-900">17</p>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Debt-Free Date</p>
+                                <p id="debt-free-date" class="mt-1 text-lg font-semibold text-gray-900">Aug 2026</p>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Total Interest Paid</p>
+                                <p id="total-interest" class="mt-1 text-lg font-semibold text-gray-900">₱88,638</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Your Debts (Ordered by Balance)</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full bg-white">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Debt Name</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Min Payment</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Interest Rate</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payoff Order</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="debts-table-body" class="divide-y divide-gray-200">
+                                    <!-- Debt entries will be displayed here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Debt Payoff Schedule</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full bg-white">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Month</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Starting Balance</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Interest</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ending Balance</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Debts Paid</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="payment-schedule-body" class="divide-y divide-gray-200">
+                                    <!-- Payment schedule will be displayed here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Monthly Cash Flow</h3>
+                            <table class="min-w-full bg-white">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cash-flow-body" class="divide-y divide-gray-200">
+                                    <!-- Cash flow data will be displayed here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">After Debt Freedom</h3>
+                            <table class="min-w-full bg-white">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="post-debt-body" class="divide-y divide-gray-200">
+                                    <!-- Post-debt data will be displayed here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 border-l-4 border-yellow-500 p-4 mb-8">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">How to Use This Plan</h3>
+                        <ol class="list-decimal list-inside space-y-1 text-gray-700">
+                            <li>Focus on making minimum payments on all debts while putting any extra money toward the smallest debt first.</li>
+                            <li>Once the smallest debt is paid off, roll its payment into the next smallest debt.</li>
+                            <li>Track your progress using the monthly payment plan schedule.</li>
+                            <li>Check off debts as you pay them off to maintain motivation.</li>
+                            <li>If your financial situation changes, adjust your extra payment amount accordingly.</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="text-center text-sm text-gray-500 mt-12">
+                        <p>Debt Snowball Plan • Generated on <span id="generation-date"></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="text-center text-sm text-gray-500 mt-12">
+            <p>© 2025 Debt Snowball Calculator • All calculations are estimates and for illustrative purposes only</p>
+        </footer>
+    </div>
+
+    <script>
+        // Default debt types with interest rates
+        const debtTypes = [
+            { type: "Credit Card", defaultRate: 2.5 }, // 30% annual
+            { type: "Personal Loan", defaultRate: 0.75 }, // 9% annual
+            { type: "Auto Loan", defaultRate: 0.5 }, // 6% annual
+            { type: "Mortgage", defaultRate: 0.33 }, // 4% annual
+            { type: "Student Loan", defaultRate: 0.42 }, // 5% annual
+            { type: "Medical Debt", defaultRate: 0.83 }, // 10% annual
+            { type: "Digital Credit", defaultRate: 1.5 }, // 18% annual
+            { type: "Payday Loan", defaultRate: 15 }, // 180% annual
+            { type: "Buy Now Pay Later", defaultRate: 1.5 }, // 18% annual
+            { type: "Other", defaultRate: 1.0 } // 12% annual
+        ];
+
+        // Sample debts for demonstration
+        const sampleDebts = [
+            { name: "Ggives", balance: 10000, minPayment: 1800, interestRate: 1.0, type: "Digital Credit" },
+            { name: "CC 4", balance: 10000, minPayment: 500, interestRate: 2.5, type: "Credit Card" },
+            { name: "CC 1", balance: 19000, minPayment: 1000, interestRate: 2.5, type: "Credit Card" },
+            { name: "Gloan", balance: 20000, minPayment: 2500, interestRate: 1.0, type: "Other" },
+            { name: "Shopee Pay Later", balance: 20000, minPayment: 1500, interestRate: 1.5, type: "Buy Now Pay Later" },
+            { name: "CC 2", balance: 40000, minPayment: 2000, interestRate: 2.5, type: "Credit Card" }
+        ];
+
+        // DOM elements
+        const debtContainer = document.getElementById('debts-container');
+        const addDebtBtn = document.getElementById('add-debt-btn');
+        const calculateBtn = document.getElementById('calculate-btn');
+        const backToInputsBtn = document.getElementById('back-to-inputs-btn');
+        const downloadPdfBtn = document.getElementById('download-pdf-btn');
+        const inputSection = document.getElementById('input-section');
+        const resultsSection = document.getElementById('results-section');
+        const currencySelect = document.getElementById('currency');
+        const currencySymbols = document.querySelectorAll('.currency-symbol');
+        const generationDateEl = document.getElementById('generation-date');
+
+        // Set current date
+        const currentDate = new Date();
+        generationDateEl.textContent = currentDate.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+
+        // Initialize with sample debts
+        sampleDebts.forEach(debt => addDebtItem(debt));
+
+        // Event listeners
+        addDebtBtn.addEventListener('click', () => addDebtItem());
+        calculateBtn.addEventListener('click', calculateSnowball);
+        backToInputsBtn.addEventListener('click', () => {
+            inputSection.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+        });
+        downloadPdfBtn.addEventListener('click', generatePDF);
+        currencySelect.addEventListener('change', updateCurrencySymbols);
+
+        // Update currency symbols when currency changes
+        function updateCurrencySymbols() {
+            const symbol = currencySelect.value;
+            document.querySelectorAll('.currency-symbol').forEach(el => {
+                el.textContent = symbol;
+            });
+            document.getElementById('currency-symbol').textContent = symbol;
+        }
+
+        // Add a new debt item to the form
+        function addDebtItem(debtData = null) {
+            const debtId = Date.now();
+            const debtItem = document.createElement('div');
+            debtItem.className = 'debt-item bg-gray-50 p-4 rounded-md';
+            debtItem.dataset.id = debtId;
+            
+            // Prepare debt type options
+            let debtTypeOptions = '';
+            debtTypes.forEach(debt => {
+                const selected = debtData && debtData.type === debt.type ? 'selected' : '';
+                debtTypeOptions += `<option value="${debt.type}" data-rate="${debt.defaultRate}" ${selected}>${debt.type}</option>`;
+            });
+            
+            debtItem.innerHTML = `
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex-grow mb-4 sm:mb-0 sm:mr-4">
+                        <input type="text" placeholder="Debt Name" class="debt-name block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" value="${debtData ? debtData.name : ''}">
+                    </div>
+                    <div class="flex-grow mb-4 sm:mb-0 sm:mr-4">
+                        <select class="debt-type block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            ${debtTypeOptions}
+                        </select>
+                    </div>
+                    <button type="button" class="remove-debt text-red-500 hover:text-red-700">
+                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Balance</label>
+                        <div class="mt-1 relative rounded-md shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 sm:text-sm currency-symbol">₱</span>
+                            </div>
+                            <input type="number" class="debt-balance focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-12 sm:text-sm border-gray-300 rounded-md py-2 border" placeholder="0.00" value="${debtData ? debtData.balance : ''}">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Minimum Payment</label>
+                        <div class="mt-1 relative rounded-md shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 sm:text-sm currency-symbol">₱</span>
+                            </div>
+                            <input type="number" class="debt-min-payment focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-12 sm:text-sm border-gray-300 rounded-md py-2 border" placeholder="0.00" value="${debtData ? debtData.minPayment : ''}">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Interest Rate (% Monthly)</label>
+                        <div class="mt-1 relative rounded-md shadow-sm">
+                            <input type="number" step="0.01" class="debt-interest focus:ring-indigo-500 focus:border-indigo-500 block w-full pr-12 sm:text-sm border-gray-300 rounded-md py-2 border" placeholder="0.00" value="${debtData ? debtData.interestRate : ''}">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 sm:text-sm">%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            debtContainer.appendChild(debtItem);
+            
+            // Add event listeners
+            const removeBtn = debtItem.querySelector('.remove-debt');
+            removeBtn.addEventListener('click', () => {
+                debtItem.remove();
+            });
+            
+            // Set interest rate based on debt type
+            const debtTypeSelect = debtItem.querySelector('.debt-type');
+            const interestInput = debtItem.querySelector('.debt-interest');
+            
+            debtTypeSelect.addEventListener('change', () => {
+                const selectedOption = debtTypeSelect.options[debtTypeSelect.selectedIndex];
+                interestInput.value = selectedOption.dataset.rate;
+            });
+            
+            // If no data provided, set default interest rate
+            if (!debtData) {
+                const selectedOption = debtTypeSelect.options[debtTypeSelect.selectedIndex];
+                interestInput.value = selectedOption.dataset.rate;
+            }
+            
+            // Update currency symbols
+            updateCurrencySymbols();
+        }
+
+        // Calculate the debt snowball plan
+        function calculateSnowball() {
+            // Get user inputs
+            const monthlyIncome = parseFloat(document.getElementById('monthly-income').value) || 0;
+            const monthlyExpenses = parseFloat(document.getElementById('monthly-expenses').value) || 0;
+            const currencySymbol = currencySelect.value;
+            
+            // Collect debt information
+            const debts = [];
+            const debtItems = document.querySelectorAll('.debt-item');
+            
+            debtItems.forEach(item => {
+                const name = item.querySelector('.debt-name').value;
+                const balance = parseFloat(item.querySelector('.debt-balance').value) || 0;
+                const minPayment = parseFloat(item.querySelector('.debt-min-payment').value) || 0;
+                const interestRate = parseFloat(item.querySelector('.debt-interest').value) || 0;
+                const typeSelect = item.querySelector('.debt-type');
+                const type = typeSelect.options[typeSelect.selectedIndex].value;
+                
+                if (name && balance > 0 && minPayment > 0) {
+                    debts.push({
+                        name,
+                        balance,
+                        minPayment,
+                        interestRate: interestRate / 100, // Convert percentage to decimal
+                        type
+                    });
+                }
+            });
+            
+            if (debts.length === 0) {
+                alert('Please add at least one debt to calculate the snowball plan.');
+                return;
+            }
+            
+            // Sort debts by balance (smallest to largest)
+            debts.sort((a, b) => a.balance - b.balance);
+            
+            // Calculate minimum payments total
+            const minPaymentsTotal = debts.reduce((sum, debt) => sum + debt.minPayment, 0);
+            
+            // Calculate extra payment amount
+            const availableForDebt = monthlyIncome - monthlyExpenses;
+            const extraPayment = availableForDebt - minPaymentsTotal;
+            
+            if (availableForDebt < minPaymentsTotal) {
+                alert('Your income after expenses is not enough to cover the minimum payments. Please adjust your income, expenses, or debt payments.');
+                return;
+            }
+            
+            // Create working copies of the debts
+            const workingDebts = debts.map(debt => ({...debt}));
+            
+            // Set up for tracking progress
+            const startDate = new Date();
+            let currentDate = new Date(startDate);
+            let monthlyData = [];
+            let totalInterestPaid = 0;
+            
+            // Simulate month-by-month payments until all debts are paid
+            let month = 1;
+            while (workingDebts.some(debt => debt.balance > 0)) {
+                const date = new Date(currentDate);
+                const monthName = date.toLocaleString('default', { month: 'short' });
+                const yearNumber = date.getFullYear();
+                
+                // Create month data object
+                const monthData = {
+                    month,
+                    date: `${monthName} ${yearNumber}`,
+                    startingBalance: workingDebts.reduce((sum, debt) => sum + debt.balance, 0),
+                    interest: 0,
+                    payment: 0,
+                    endingBalance: 0,
+                    debtsPaidOff: []
+                };
+                
+                // Apply interest to all debts
+                workingDebts.forEach(debt => {
+                    if (debt.balance > 0) {
+                        const interest = Math.round(debt.balance * debt.interestRate * 100) / 100;
+                        debt.interest = interest;
+                        monthData.interest += interest;
+                        totalInterestPaid += interest;
+                    }
+                });
+                
+                // Make minimum payments on all debts
+                workingDebts.forEach(debt => {
+                    if (debt.balance > 0) {
+                        const payment = Math.min(debt.minPayment, debt.balance + debt.interest);
+                        debt.balance = Math.max(0, debt.balance + debt.interest - payment);
+                        monthData.payment += payment;
+                    }
+                });
+                
+                // Apply extra payment to smallest debt
+                let remainingExtra = extraPayment;
+                for (let i = 0; i < workingDebts.length; i++) {
+                    if (workingDebts[i].balance > 0 && remainingExtra > 0) {
+                        const extra = Math.min(remainingExtra, workingDebts[i].balance);
+                        workingDebts[i].balance -= extra;
+                        remainingExtra -= extra;
+                        monthData.payment += extra;
+                    }
+                }
+                
+                // Check for paid off debts
+                const paidOffThisMonth = [];
+                workingDebts.forEach((debt, index) => {
+                    if (debt.balance === 0 && debt.minPayment > 0) {
+                        paidOffThisMonth.push({
+                            name: debt.name,
+                            minPayment: debt.minPayment
+                        });
+                        
+                        // Add to paid off list
+                        monthData.debtsPaidOff.push(debt.name);
+                    }
+                });
+                
+                // Add min payments of paid off debts to next smallest debt
+                if (paidOffThisMonth.length > 0) {
+                    const totalMinPayment = paidOffThisMonth.reduce((sum, debt) => sum + debt.minPayment, 0);
+                    for (let i = 0; i < workingDebts.length; i++) {
+                        if (workingDebts[i].balance > 0) {
+                            workingDebts[i].minPayment += totalMinPayment;
+                            break;
+                        }
+                    }
+                }
+                
+                // Calculate ending balance
+                monthData.endingBalance = workingDebts.reduce((sum, debt) => sum + debt.balance, 0);
+                
+                // Store month data
+                monthlyData.push(monthData);
+                
+                // Advance to next month
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                month++;
+                
+                // Safety check to prevent infinite loops
+                if (month > 1000) break;
+            }
+            
+            // Display results
+            displayResults(debts, monthlyData, {
+                totalMonths: monthlyData.length,
+                totalInterest: totalInterestPaid,
+                monthlyIncome,
+                monthlyExpenses,
+                minPaymentsTotal,
+                extraPayment,
+                currencySymbol
+            });
+            
+            // Show results section and hide input section
+            inputSection.classList.add('hidden');
+            resultsSection.classList.remove('hidden');
+        }
+
+        // Display the results
+        function displayResults(debts, monthlyData, summary) {
+            const currencySymbol = summary.currencySymbol;
+            const formatCurrency = (amount) => {
+                return `${currencySymbol}${amount.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
+            };
+            
+            // Update summary
+            document.getElementById('total-debt').textContent = formatCurrency(debts.reduce((sum, debt) => sum + debt.balance, 0));
+            document.getElementById('months-to-freedom').textContent = summary.totalMonths;
+            
+            // Calculate debt-free date
+            const endDate = new Date();
+            endDate.setMonth(endDate.getMonth() + summary.totalMonths);
+            document.getElementById('debt-free-date').textContent = endDate.toLocaleString('default', { month: 'short', year: 'numeric' });
+            
+            document.getElementById('total-interest').textContent = formatCurrency(summary.totalInterest);
+            
+            // Update debt details table
+            const debtsTableBody = document.getElementById('debts-table-body');
+            debtsTableBody.innerHTML = '';
+            
+            debts.forEach((debt, index) => {
+                const row = document.createElement('tr');
+                
+                // Find month when this debt is paid off
+                let payoffMonth = 0;
+                let payoffDate = '';
+                
+                for (let i = 0; i < monthlyData.length; i++) {
+                    if (monthlyData[i].debtsPaidOff.includes(debt.name)) {
+                        payoffMonth = i + 1;
+                        payoffDate = monthlyData[i].date;
+                        break;
+                    }
+                }
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${debt.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(debt.balance)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(debt.minPayment)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${(debt.interestRate * 100).toFixed(2)}% monthly (${(debt.interestRate * 1200).toFixed(1)}% annual)</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payoffMonth > 0 ? 
+                        `Month ${payoffMonth} (${payoffDate})` : 'N/A'}</td>
+                `;
+                
+                debtsTableBody.appendChild(row);
+            });
+            
+            // Update payment schedule
+            const paymentScheduleBody = document.getElementById('payment-schedule-body');
+            paymentScheduleBody.innerHTML = '';
+            
+            monthlyData.forEach((month, index) => {
+                const row = document.createElement('tr');
+                const isLastRow = index === monthlyData.length - 1;
+                
+                row.className = isLastRow ? 'bg-green-50' : '';
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${isLastRow ? 'text-green-800' : 'text-gray-900'}">${month.month}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm ${isLastRow ? 'text-green-800' : 'text-gray-500'}">${month.date}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm ${isLastRow ? 'text-green-800' : 'text-gray-500'}">${formatCurrency(month.startingBalance)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm ${isLastRow ? 'text-green-800' : 'text-gray-500'}">${formatCurrency(month.interest)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm ${isLastRow ? 'text-green-800' : 'text-gray-500'}">${formatCurrency(month.payment)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm ${isLastRow ? 'text-green-800 font-bold' : 'text-gray-500'}">${formatCurrency(month.endingBalance)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600">${month.debtsPaidOff.length > 0 ? month.debtsPaidOff.join(', ') : ''}</td>
+                `;
+                
+                paymentScheduleBody.appendChild(row);
+            });
+            
+            // Update cash flow
+            const cashFlowBody = document.getElementById('cash-flow-body');
+            cashFlowBody.innerHTML = `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Income</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(summary.monthlyIncome)}</td>
+                </tr>
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Living Expenses</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(summary.monthlyExpenses)}</td>
+                </tr>
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Debt Payments</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(summary.minPaymentsTotal + summary.extraPayment)}</td>
+                </tr>
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Remaining Cash</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(summary.monthlyIncome - summary.monthlyExpenses - summary.minPaymentsTotal - summary.extraPayment)}</td>
+                </tr>
+            `;
+            
+            // Update post-debt
+            const postDebtBody = document.getElementById('post-debt-body');
+            postDebtBody.innerHTML = `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Income</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(summary.monthlyIncome)}</td>
+                </tr>
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Living Expenses</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(summary.monthlyExpenses)}</td>
+                </tr>
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Debt Payments</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(0)}</td>
+                </tr>
+                <tr class="bg-green-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-800">Available for Savings/Investments</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-800">${formatCurrency(summary.monthlyIncome - summary.monthlyExpenses)}</td>
+                </tr>
+            `;
+        }
+
+        // Generate PDF from the results
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            
+            const element = document.getElementById('pdf-content');
+            
+            // Create a new instance of jsPDF
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            // Get the current date for the filename
+            const date = new Date();
+            const filename = `Debt_Snowball_Plan_${date.toISOString().split('T')[0]}.pdf`;
+            
+            // Use html2canvas to create an image of the content
+            html2canvas(element, { 
+                scale: 2,
+                useCORS: true,
+                logging: false
+            }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                
+                // Get dimensions
+                const imgWidth = 210; // A4 width in mm
+                const pageHeight = 295; // A4 height in mm
+                const imgHeight = canvas.height * imgWidth / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 0;
+                
+                // Add image to PDF
+                doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+                
+                // Add new pages if needed
+                while (heightLeft > 0) {
+                    position = heightLeft - imgHeight;
+                    doc.addPage();
+                    doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+                
+                // Save the PDF
+                doc.save(filename);
+            });
+        }
+    </script>
+</body>
+</html>
