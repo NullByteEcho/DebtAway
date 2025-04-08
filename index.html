@@ -9,47 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         .debt-item {
-            // Update cash flow
-            const cashFlowBody = document.getElementById('cash-flow-body');
-            cashFlowBody.innerHTML = `
-                <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Income</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(summary.monthlyIncome)}</td>
-                </tr>
-                <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Living Expenses</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(summary.monthlyExpenses)}</td>
-                </tr>
-                <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Debt Payments</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(summary.minPaymentsTotal + summary.extraPayment)}</td>
-                </tr>
-                <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Remaining Cash</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(summary.monthlyIncome - summary.monthlyExpenses - summary.minPaymentsTotal - summary.extraPayment)}</td>
-                </tr>
-            `;
-            
-            // Update post-debt
-            const postDebtBody = document.getElementById('post-debt-body');
-            postDebtBody.innerHTML = `
-                <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Income</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(summary.monthlyIncome)}</td>
-                </tr>
-                <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Living Expenses</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(summary.monthlyExpenses)}</td>
-                </tr>
-                <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Debt Payments</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(0)}</td>
-                </tr>
-                <tr class="bg-green-50">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-800">Available for Savings/Investments</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-800">${formatCurrency(summary.monthlyIncome - summary.monthlyExpenses)}</td>
-                </tr>
-            `;transition: all 0.3s ease;
+            transition: all 0.3s ease;
         }
         
         .debt-item:hover {
@@ -58,18 +18,7 @@
 
         @media print {
             .no-print {
-                // Add new pages if needed
-                while (heightLeft > 0) {
-                    position = heightLeft - imgHeight;
-                    doc.addPage();
-                    doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                    heightLeft -= pageHeight;
-                }
-                
-                // Save the PDF
-                doc.save(filename);
-            });
-        }display: none;
+                display: none;
             }
             
             body {
@@ -199,20 +148,7 @@
             </div>
             
             <div class="mb-8">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex-grow mb-4 sm:mb-0 sm:mr-4">
-                        <input type="text" placeholder="Debt Name" class="debt-name block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" value="${debtData ? debtData.name : ''}">
-                    </div>
-                    <div class="flex-grow mb-4 sm:mb-0 sm:mr-4">
-                        <select class="debt-type block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                            ${debtTypeOptions}
-                        </select>
-                    </div>
-                    <button type="button" class="remove-debt text-red-500 hover:text-red-700">
-                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                    </button> justify-between items-center mb-4">
+                <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-medium text-gray-800">Your Debts</h3>
                     <div class="flex space-x-2">
                         <button id="clear-debts-btn" type="button" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
@@ -468,18 +404,9 @@
         const inputSection = document.getElementById('input-section');
         const resultsSection = document.getElementById('results-section');
         const currencySelect = document.getElementById('currency');
-        const currencySymbols = document.querySelectorAll('.currency-symbol');
         const generationDateEl = document.getElementById('generation-date');
         const detailedPlanModal = document.getElementById('detailed-plan-modal');
         const detailedPlanClose = document.querySelector('#detailed-plan-modal .close');
-
-        // Set current date
-        const currentDate = new Date();
-        generationDateEl.textContent = currentDate.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-        });
 
         // Global variable to store calculation results
         let calculationResults = {
@@ -488,6 +415,14 @@
             detailedPaymentPlan: [],
             summary: {}
         };
+
+        // Set current date
+        const currentDate = new Date();
+        generationDateEl.textContent = currentDate.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
 
         // Initialize with sample debts
         sampleDebts.forEach(debt => addDebtItem(debt));
@@ -539,10 +474,4 @@
             
             // Prepare debt type options
             let debtTypeOptions = '';
-            debtTypes.forEach(debt => {
-                const selected = debtData && debtData.type === debt.type ? 'selected' : '';
-                debtTypeOptions += `<option value="${debt.type}" data-rate="${debt.defaultRate}" ${selected}>${debt.type}</option>`;
-            });
-            
-            debtItem.innerHTML = `
-                <div class="flex
+            debtTypes.forEach(debt =>
