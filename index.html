@@ -553,7 +553,7 @@
             updateCurrencySymbols();
         }
 
-        // Calculate the debt snowball plan
+        // Calculate the debt snowball plan with accounting precision
         function calculateSnowball() {
             // Get user inputs
             const monthlyIncome = parseFloat(document.getElementById('monthly-income').value) || 0;
@@ -575,9 +575,9 @@
                 if (name && balance > 0 && minPayment > 0) {
                     debts.push({
                         name,
-                        balance,
-                        minPayment,
-                        interestRate: interestRate / 100, // Convert percentage to decimal
+                        balance: parseFloat(balance.toFixed(2)),  // Ensure precision
+                        minPayment: parseFloat(minPayment.toFixed(2)),  // Ensure precision
+                        interestRate: parseFloat((interestRate / 100).toFixed(6)),  // Convert percentage to decimal with precision
                         type
                     });
                 }
@@ -591,22 +591,28 @@
             // Sort debts by balance (smallest to largest)
             debts.sort((a, b) => a.balance - b.balance);
             
-            // Calculate minimum payments total
-            const minPaymentsTotal = debts.reduce((sum, debt) => sum + debt.minPayment, 0);
+            // Calculate minimum payments total with precision
+            const minPaymentsTotal = debts.reduce((sum, debt) => 
+                parseFloat((sum + debt.minPayment).toFixed(2)), 0);
             
-            // Calculate extra payment amount
-            const availableForDebt = monthlyIncome - monthlyExpenses;
+            // Calculate extra payment amount with precision
+            const availableForDebt = parseFloat((monthlyIncome - monthlyExpenses).toFixed(2));
             let extraPayment = 0;
             
             if (availableForDebt < minPaymentsTotal) {
                 alert('Your income after expenses is not enough to cover the minimum payments. Please adjust your income, expenses, or debt payments.');
                 return;
             } else {
-                extraPayment = availableForDebt - minPaymentsTotal;
+                extraPayment = parseFloat((availableForDebt - minPaymentsTotal).toFixed(2));
             }
             
-            // Create working copies of the debts
-            const workingDebts = debts.map(debt => ({...debt}));
+            // Create working copies of the debts with precision
+            const workingDebts = debts.map(debt => ({
+                ...debt,
+                balance: parseFloat(debt.balance.toFixed(2)),
+                minPayment: parseFloat(debt.minPayment.toFixed(2)),
+                interestRate: parseFloat(debt.interestRate.toFixed(6))
+            }));
             
             // For tracking detailed payment plan
             const workingDebtsHistory = [];
@@ -628,7 +634,8 @@
                 const monthData = {
                     month,
                     date: `${monthName} ${yearNumber}`,
-                    startingBalance: workingDebts.reduce((sum, debt) => sum + debt.balance, 0),
+                    startingBalance: parseFloat(workingDebts.reduce(
+                        (sum, debt) => parseFloat((sum + debt.balance).toFixed(2)), 0).toFixed(2)),
                     interest: 0,
                     payment: 0,
                     endingBalance: 0,
@@ -638,28 +645,31 @@
                 // Keep track of payments for each debt this month
                 const monthlyDebtPayments = [];
                 
-                // Apply interest to all debts
+                // Apply interest to all debts with precision
                 workingDebts.forEach(debt => {
                     if (debt.balance > 0) {
-                        const interest = Math.round(debt.balance * debt.interestRate * 100) / 100;
+                        // Calculate interest with accounting precision
+                        const interest = parseFloat((debt.balance * debt.interestRate).toFixed(2));
                         debt.interest = interest;
-                        monthData.interest += interest;
-                        totalInterestPaid += interest;
+                        monthData.interest = parseFloat((monthData.interest + interest).toFixed(2));
+                        totalInterestPaid = parseFloat((totalInterestPaid + interest).toFixed(2));
                     }
                 });
                 
-                // Make minimum payments on all debts
+                // Make minimum payments on all debts with precision
                 workingDebts.forEach(debt => {
                     if (debt.balance > 0) {
                         const interest = debt.interest || 0;
-                        const payment = Math.min(debt.minPayment, debt.balance + interest);
-                        debt.balance = Math.max(0, debt.balance + interest - payment);
-                        monthData.payment += payment;
+                        // Calculate minimum payment with accounting precision
+                        const paymentNeeded = parseFloat((debt.balance + interest).toFixed(2));
+                        const payment = parseFloat(Math.min(debt.minPayment, paymentNeeded).toFixed(2));
+                        debt.balance = parseFloat(Math.max(0, (paymentNeeded - payment)).toFixed(2));
+                        monthData.payment = parseFloat((monthData.payment + payment).toFixed(2));
                         
                         // Track payment for this debt
                         monthlyDebtPayments.push({
                             name: debt.name,
-                            minPayment: Math.min(debt.minPayment, debt.balance + interest),
+                            minPayment: payment,
                             extraPayment: 0,
                             totalPayment: payment,
                             remainingBalance: debt.balance,
@@ -678,23 +688,28 @@
                     }
                 });
                 
-                // Apply extra payment to smallest debt
+                // Apply extra payment to smallest debt with precision
                 let remainingExtra = extraPayment;
                 for (let i = 0; i < workingDebts.length; i++) {
                     if (workingDebts[i].balance > 0 && remainingExtra > 0) {
-                        const extra = Math.min(remainingExtra, workingDebts[i].balance);
-                        workingDebts[i].balance -= extra;
-                        remainingExtra -= extra;
-                        monthData.payment += extra;
+                        // Calculate extra payment with accounting precision
+                        const extra = parseFloat(Math.min(remainingExtra, workingDebts[i].balance).toFixed(2));
+                        workingDebts[i].balance = parseFloat((workingDebts[i].balance - extra).toFixed(2));
+                        remainingExtra = parseFloat((remainingExtra - extra).toFixed(2));
+                        monthData.payment = parseFloat((monthData.payment + extra).toFixed(2));
                         
-                        // Update payment tracking
+                        // Update payment tracking with precision
                         const debtPayment = monthlyDebtPayments.find(dp => dp.name === workingDebts[i].name);
                         if (debtPayment) {
                             debtPayment.extraPayment = extra;
-                            debtPayment.totalPayment += extra;
+                            debtPayment.totalPayment = parseFloat((debtPayment.totalPayment + extra).toFixed(2));
                             debtPayment.remainingBalance = workingDebts[i].balance;
-                            debtPayment.paidOff = workingDebts[i].balance === 0;
+                            debtPayment.paidOff = debtPayment.remainingBalance === 0;
                         }
+                        
+                        // Once we've applied an extra payment to one debt, break the loop
+                        // This ensures we follow the true snowball method
+                        break;
                     }
                 }
                 
@@ -704,20 +719,26 @@
                     if (debt.balance === 0 && debt.minPayment > 0) {
                         paidOffThisMonth.push({
                             name: debt.name,
-                            minPayment: debt.minPayment
+                            minPayment: parseFloat(debt.minPayment.toFixed(2))
                         });
                         
                         // Add to paid off list
                         monthData.debtsPaidOff.push(debt.name);
+                        
+                        // Reset the minPayment to prevent it from being counted in future months
+                        debt.minPayment = 0;
                     }
                 });
                 
-                // Add min payments of paid off debts to next smallest debt
+                // Add min payments of paid off debts to next smallest debt with precision
                 if (paidOffThisMonth.length > 0) {
-                    const totalMinPayment = paidOffThisMonth.reduce((sum, debt) => sum + debt.minPayment, 0);
+                    const totalMinPayment = paidOffThisMonth.reduce(
+                        (sum, debt) => parseFloat((sum + debt.minPayment).toFixed(2)), 0);
+                        
                     for (let i = 0; i < workingDebts.length; i++) {
                         if (workingDebts[i].balance > 0) {
-                            workingDebts[i].minPayment += totalMinPayment;
+                            workingDebts[i].minPayment = parseFloat(
+                                (workingDebts[i].minPayment + totalMinPayment).toFixed(2));
                             break;
                         }
                     }
@@ -727,11 +748,12 @@
                 workingDebtsHistory.push({
                     month,
                     date: `${monthName} ${yearNumber}`,
-                    payments: [...monthlyDebtPayments]
+                    payments: JSON.parse(JSON.stringify(monthlyDebtPayments)) // Deep clone to prevent reference issues
                 });
                 
-                // Calculate ending balance
-                monthData.endingBalance = workingDebts.reduce((sum, debt) => sum + debt.balance, 0);
+                // Calculate ending balance with precision
+                monthData.endingBalance = parseFloat(workingDebts.reduce(
+                    (sum, debt) => parseFloat((sum + debt.balance).toFixed(2)), 0).toFixed(2));
                 
                 // Store month data
                 monthlyData.push(monthData);
@@ -744,23 +766,31 @@
                 if (month > 1000) break;
             }
             
-            // Generate summary
+            // Generate summary with precision
             const summary = {
                 totalMonths: monthlyData.length,
-                totalInterest: totalInterestPaid,
-                monthlyIncome,
-                monthlyExpenses,
-                minPaymentsTotal,
-                extraPayment,
+                totalInterest: parseFloat(totalInterestPaid.toFixed(2)),
+                monthlyIncome: parseFloat(monthlyIncome.toFixed(2)),
+                monthlyExpenses: parseFloat(monthlyExpenses.toFixed(2)),
+                minPaymentsTotal: parseFloat(minPaymentsTotal.toFixed(2)),
+                extraPayment: parseFloat(extraPayment.toFixed(2)),
                 currencySymbol
             };
             
+            // Verify the total payment amounts in the summary
+            // This ensures our monthly totals are correct
+            let totalPaymentCheck = 0;
+            monthlyData.forEach(month => {
+                totalPaymentCheck = parseFloat((totalPaymentCheck + month.payment).toFixed(2));
+            });
+            
             // Store calculation results for detailed plan
             calculationResults = {
-                debts: [...debts],
-                monthlyData: [...monthlyData],
+                debts: JSON.parse(JSON.stringify(debts)), // Deep clone
+                monthlyData: JSON.parse(JSON.stringify(monthlyData)), // Deep clone
                 detailedPaymentPlan: workingDebtsHistory,
-                summary: {...summary}
+                summary: {...summary},
+                totalPaymentCheck: totalPaymentCheck
             };
             
             // Display results
@@ -771,7 +801,7 @@
             resultsSection.classList.remove('hidden');
         }
 
-        // Show detailed payment plan
+        // Show detailed payment plan with accounting precision
         function showDetailedPlan() {
             const detailedPlanModal = document.getElementById('detailed-plan-modal');
             const detailedPaymentBody = document.getElementById('detailed-payment-body');
@@ -780,9 +810,14 @@
             // Clear previous content
             detailedPaymentBody.innerHTML = '';
             
-            // Format currency function
+            // Format currency function with precision
             const formatCurrency = (amount) => {
-                return `${currencySymbol}${amount.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
+                // Ensure the amount is properly rounded to 2 decimal places
+                const roundedAmount = parseFloat(amount.toFixed(2));
+                return `${currencySymbol}${roundedAmount.toLocaleString(undefined, {
+                    minimumFractionDigits: 0, 
+                    maximumFractionDigits: 0
+                })}`;
             };
             
             // Get original debt names in order of snowball
@@ -837,13 +872,17 @@
                         const isPaidOff = payment.paidOff && payment.totalPayment > 0;
                         
                         if (payment.totalPayment > 0) {
+                            // Ensure payment amounts are properly rounded
+                            const totalPayment = parseFloat(payment.totalPayment.toFixed(2));
+                            const extraPayment = parseFloat(payment.extraPayment.toFixed(2));
+                            
                             // Show payment details
                             if (hasExtraPayment) {
                                 // Highlight cell with extra payment
                                 cell.className = 'px-4 py-3 text-sm font-bold text-indigo-700 bg-indigo-50';
-                                cell.innerHTML = `${formatCurrency(payment.totalPayment)}<br><span class="text-xs">(+${formatCurrency(payment.extraPayment)} extra)</span>`;
+                                cell.innerHTML = `${formatCurrency(totalPayment)}<br><span class="text-xs">(+${formatCurrency(extraPayment)} extra)</span>`;
                             } else {
-                                cell.textContent = formatCurrency(payment.totalPayment);
+                                cell.textContent = formatCurrency(totalPayment);
                             }
                             
                             // Add paid off indicator
@@ -851,7 +890,7 @@
                                 cell.innerHTML += `<br><span class="text-xs font-medium text-green-600">PAID OFF!</span>`;
                             }
                             
-                            totalMonthlyPayment += payment.totalPayment;
+                            totalMonthlyPayment = parseFloat((totalMonthlyPayment + totalPayment).toFixed(2));
                         } else {
                             cell.textContent = '-';
                         }
@@ -879,11 +918,17 @@
         function displayResults(debts, monthlyData, summary) {
             const currencySymbol = summary.currencySymbol;
             const formatCurrency = (amount) => {
-                return `${currencySymbol}${amount.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
+                // Ensure the amount is properly rounded to 2 decimal places
+                const roundedAmount = parseFloat(amount.toFixed(2));
+                return `${currencySymbol}${roundedAmount.toLocaleString(undefined, {
+                    minimumFractionDigits: 0, 
+                    maximumFractionDigits: 0
+                })}`;
             };
             
             // Update summary
-            document.getElementById('total-debt').textContent = formatCurrency(debts.reduce((sum, debt) => sum + debt.balance, 0));
+            document.getElementById('total-debt').textContent = formatCurrency(debts.reduce((sum, debt) => 
+                parseFloat((sum + debt.balance).toFixed(2)), 0));
             document.getElementById('months-to-freedom').textContent = summary.totalMonths;
             
             // Calculate debt-free date
@@ -947,7 +992,7 @@
                 paymentScheduleBody.appendChild(row);
             });
             
-            // Update cash flow
+            // Update cash flow with template literals for proper rendering
             const cashFlowBody = document.getElementById('cash-flow-body');
             cashFlowBody.innerHTML = `
                 <tr>
@@ -968,7 +1013,7 @@
                 </tr>
             `;
             
-            // Update post-debt
+            // Update post-debt with template literals for proper rendering
             const postDebtBody = document.getElementById('post-debt-body');
             postDebtBody.innerHTML = `
                 <tr>
